@@ -1,106 +1,135 @@
-/**
- *
- *
- */
 (function(exports) {
     
-    exports.Grab = Grab;
+    exports.Grabber = Grabber;
     
-    var secret = Symbol("_secret_vars");
-    
-    //
-    // Creator
-    //
-
-    function Grab() {
+    /**
+     * Create a grabber for your module
+     * @return {Function} - grab
+     */
+    function Grabber() {
+        var _static = Symbol('static'),
+            _instance = Symbol('instance');
         
-        //
-        // Symbols
-        //
-        var instance = Symbol("instance_vars");
-        var static = Symbol("static_vars");
-        
+        /**
+         * Grab an instance or static variable from the context
+         * @param {Object} ctx
+         * @return {Object} - chainable grabber
+         */
         return function(ctx) {
-            return new Grabber(ctx, {
-                'instance': instance,
-                'static': static
-            });
-        };
-    }
-    
-    //
-    // Constructor
-    //
+            
+            return extendSecret(proto, {
+                ctx: ctx,
+                loc: ctx,
 
-    function Grabber(ctx, symbols) {
-        this[secret] = {
-            symbols: symbols,
-            ctx: ctx,
-            location: ctx,
-            type: null,
-            action: null
-        };
+                _static: _static,
+                _instance: _instance
+            });
+        }
     }
     
+    var secret = Symbol('secrets');
+    
     //
-    // Prototype
+    // Chaining functions
     //
     
-    // thing that actually does something
-    Grabber.prototype.var =
-    Grabber.prototype.variable = function variable(key, value) {
-        if (!this[secret]['type']) throw new Error("error");
-        if (!this[secret]['action']) throw new Error("error");
-        if (!this[secret]['location'][this[secret]['type']]) this[secret]['location'][this[secret]['type']] = Object.create(null);
-        return this[secret]['action'](this[secret]['location'][this[secret]['type']], key, value);
+    var chainable = function() {
+        
     };
-    
-    // chainable
-    defineProperties(Grabber.prototype, {
+    defineProperties(chainable, {
         
-        'static': function() {
-            this[secret]['type'] = this[secret]['symbols']['static'];
-            this[secret]['location'] = this[secret]['ctx']['constructor']['prototype'];
+        get: function() {
+            return extendSecret(this, {
+                action: get
+            });
         },
         
-        'instance': function() {
-            this[secret]['type'] = this[secret]['symbols']['instance'];
-            this[secret]['location'] = this[secret]['ctx'];
+        set: function() {
+            return extendSecret(this, {
+                action: set
+            });
         },
         
-        'get': function() {
-            this[secret]['action'] = get;
+        remove: function() {
+            return extendSecret(this, {
+                action: remove
+            });
         },
         
-        'set': function() {
-            this[secret]['action'] = set;
+        static: function() {
+            return extendSecret(this, {
+                type: this[secret]._static
+            });
         },
         
-        'remove': function() {
-            this[secret]['action'] = remove;
+        instance: function() {
+            return extendSecret(this, {
+                type: this[secret]._instance
+            });
         }
     });
     
-    // filler
-    ['a', 'the', 'then'].forEach(function(filler) {
-        defineProperty(Grabber.prototype, filler, function(){});
+    chainable.var =
+    chainable.variable = function() {
+        var map = this[secret];
+        
+        // TODO v8ify
+        if (!map.loc[map.type]) map.loc[map.type] = Object.create(null);
+        return map.action.call(map.loc[map.type], arguments, map);
+    };
+    
+    ['a', 'the', 'then', 'variable', 'var'].forEach(function(filler) {
+        defineProperty(chainable, filler, noop);
     });
-
+    
     //
-    // Handlers
+    // Flags
     //
-    function get(vars, key) {
-        return vars[key];
+    
+    var proto = Object.create(chainable);
+    proto[secret] = {
+        ctx: undefined,
+        loc: undefined,
+        type: null,
+        action: null,
+        
+        _instance: null,
+        _static: null
+    };
+    
+    //
+    // Actions
+    //
+    
+    function get(args, flags) {
+        return this[args[0]];
     }
-
-    function set(vars, key, value) {
-        return vars[key] = value;
+    
+    function set(args, flags) {
+        return this[args[0]] = args[1];
     }
-
-    function remove(vars, key) {
-        return delete vars[key];
+    
+    function remove(args, flags) {
+        return delete this[args[0]];
     }
-
+    
+    //
+    // Utility methods
+    //
+    
+    /**
+     * Extend an object
+     * @param {Object} obj
+     * @param {Object} params
+     */
+    function extendSecret(obj, props) {
+        obj[secret]= Object.create(obj[secret]);
+        for (key in props) {
+            if (props.hasOwnProperty(key)) obj[secret][key] = props[key];
+        }
+        return obj;
+    }
+    
     /**
      * A property definer, used for chained syntax
      * Borrowed from chai.js
@@ -118,7 +147,7 @@
             configurable: true
         });
     }
-
+ 
     /**
      * Define a bunch of properties at once
      * @param {Object} ctx
@@ -129,5 +158,10 @@
             defineProperty(ctx, key, getters[key]);
         }
     }
+    
+    /**
+     * Does nothing
+     */
+    function noop() {}
     
 })(this);
