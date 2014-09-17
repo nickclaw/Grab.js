@@ -2,131 +2,187 @@
     
     exports.Grabber = Grabber;
     
-    /**
-     * Create a grabber for your module
-     * @return {Function} - grab
-     */
+    //
+    // Internal flags
+    //
+    
+    var namespace = Symbol(),
+        context = Symbol(),
+        action = Symbol(),
+        location = Symbol(),
+        type = Symbol(),
+        private = Symbol();
+        
+    //
+    // The heart of the beast
+    //
+    
     function Grabber() {
-        var _static = Symbol('static'),
-            _instance = Symbol('instance');
+        var ns = Symbol();
         
         /**
-         * Grab an instance or static variable from the context
+         * The `grab` function
          * @param {Object} ctx
-         * @return {Object} - chainable grabber
+         * @return {Object} accessor
          */
         return function(ctx) {
-            
-            return extendSecret(proto, {
-                ctx: ctx,
-                loc: ctx,
-
-                _static: _static,
-                _instance: _instance
-            });
-        }
+            return extend(accessor, [
+                namespace, ns,
+                context, ctx,
+                location, ctx
+            ]);
+        };
     }
     
-    var secret = Symbol('secrets');
-    
     //
-    // Chaining functions
+    // Base accessor object
     //
     
-    var chainable = function() {
+    // all flags and properties hidden behind
+    // internal symbols
+    var accessor = extend(Object.create(null), [
+        context, undefined,
+        namespace, null,
+        location, null,
+        action, noop,
+        private, true
+    ]);
+    
+    // make chainable properties to set flags/functions
+    defineProperties(accessor, {
         
-    };
-    defineProperties(chainable, {
-        
-        get: function() {
-            return extendSecret(this, {
-                action: get
-            });
+        /**
+         * Access the prototype namespaces
+         * shared by all instances of this object
+         */
+        'static': function() {
+            return extend(this, [
+                location, this[context].__proto__
+            ]);
         },
         
-        set: function() {
-            return extendSecret(this, {
-                action: set
-            });
+        /**
+         * Access the instance namespace
+         * only used by this instance of the object
+         */
+        'instance': function() {
+            return extend(this, [
+                location, this[context]
+            ]);
         },
         
-        remove: function() {
-            return extendSecret(this, {
-                action: remove
-            });
+        /**
+         * Access public variables
+         * probably shouldn't ever need to be used but..
+         */
+        'public': function() {
+            return extend(this, [
+                private, false
+            ]);
         },
         
-        static: function() {
-            return extendSecret(this, {
-                type: this[secret]._static
-            });
+        /**
+         * The default, access variables hidden behind
+         * a namespace. Also probably not going to be used..
+         */
+        'private': function() {
+            return extend(this, [
+                private, true
+            ]);
         },
         
-        instance: function() {
-            return extendSecret(this, {
-                type: this[secret]._instance
-            });
+        /**
+         * Want to get a variable
+         */
+        'get': function() {
+            return extend(this, [
+                action, actions.get
+            ]);
+        },
+        
+        /**
+         * Want to set a variable
+         */
+        'set': function() {
+            return extend(this, [
+                action, actions.set
+            ]);
+        },
+        
+        /**
+         * Want to delete a variable
+         */
+        'remove': function() {
+            return extend(this, [
+                action, actions.remove
+            ]);
         }
     });
-    
-    chainable.var =
-    chainable.variable = function() {
-        var map = this[secret];
         
-        // TODO v8ify
-        if (!map.loc[map.type]) map.loc[map.type] = Object.create(null);
-        return map.action.call(map.loc[map.type], arguments, map);
-    };
-    
-    ['a', 'the', 'then', 'variable', 'var'].forEach(function(filler) {
-        defineProperty(chainable, filler, noop);
+    // add filler properties (for nice sentences)
+    ['a', 'the', 'then'].forEach(function(filler) {
+        defineProperty(accessor, filler, noop);
     });
     
-    //
-    // Flags
-    //
-    
-    var proto = Object.create(chainable);
-    proto[secret] = {
-        ctx: undefined,
-        loc: undefined,
-        type: null,
-        action: null,
+    // the function to actually do something
+    // after all necessary flags have been set
+    accessor.variable =
+    accessor.var = function() {
+        var public = !this[private],
+            loc = this[location],
+            act = this[action],
+            ns = this[namespace];
+            
+        // if public, don't worry about namespacing, do action
+        if (public) return act.apply(loc, arguments);
         
-        _instance: null,
-        _static: null
+        // otherwise, make sure namespace exists, then do action
+        if (!loc[ns]) loc[ns] = Object.create(null);
+        return act.apply(loc[ns], arguments);
     };
     
     //
     // Actions
     //
     
-    function get(args, flags) {
-        return this[args[0]];
-    }
-    
-    function set(args, flags) {
-        return this[args[0]] = args[1];
-    }
-    
-    function remove(args, flags) {
-        return delete this[args[0]];
-    }
+    var actions = {
+        
+        // get variable
+        get: function(key) {
+            return this[key];
+        },
+        
+        // set variable
+        set: function(key, value) {
+            return this[key] = value;
+        },
+        
+        // delete variable
+        remove: function(key) {
+            return delete this[key];
+        }
+    };
     
     //
-    // Utility methods
+    // Utilities
     //
     
     /**
-     * Extend an object
+     * Extends an object overriding properties without destroying them
+     * Uses an array of [key, value, key value] instead of an object
+     * to make it easier to use Symbols as keys
+     *
      * @param {Object} obj
-     * @param {Object} params
+     * @param {Array} props - [key, value, key value]
+     * @return {Object} - extended object
      */
-    function extendSecret(obj, props) {
-        obj[secret]= Object.create(obj[secret]);
-        for (key in props) {
-            if (props.hasOwnProperty(key)) obj[secret][key] = props[key];
+    function extend(obj, props) {
+        obj = Object.create(obj);
+        
+        for(var i = 0; i < props.length; i+=2) {
+            obj[props[i]] = props[i + 1];
         }
+        
         return obj;
     }
     
@@ -154,7 +210,7 @@
      * @param {Object} getters
      */
     function defineProperties(ctx, getters) {
-        for(key in getters) {
+        for(var key in getters) {
             defineProperty(ctx, key, getters[key]);
         }
     }
