@@ -1,7 +1,5 @@
-(function(exports) {
-    
-    exports.Grabber = Grabber;
-    
+(function(window) {
+        
     //
     // Internal flags
     //
@@ -12,7 +10,8 @@
         location = Symbol(),
         type = Symbol(),
         private = Symbol();
-        
+    
+
     //
     // The heart of the beast
     //
@@ -34,6 +33,8 @@
         };
     }
     
+
+
     //
     // Base accessor object
     //
@@ -141,6 +142,8 @@
         return act.apply(loc[ns], arguments);
     };
     
+
+
     //
     // Actions
     //
@@ -163,6 +166,8 @@
         }
     };
     
+
+
     //
     // Utilities
     //
@@ -219,5 +224,26 @@
      * Does nothing
      */
     function noop() {}
+
+
+    //
+    // Export
+    //
+
+    // node
+    if ( typeof module === 'object' && module && typeof module.exports === "object") {
+        module.exports = Grabber;
+    }
+    
+    // browser
+    else {
+        window.Grabber = Grabber;
+
+        if (typeof define === "function" && define.amd) {
+            define("grabber", [], function() {
+                return Grabber;
+            });
+        }
+    }
     
 })(this);
