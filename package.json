@@ -1,0 +1,23 @@
+{
+  "name": "symgrab",
+  "version": "0.1.0",
+  "description": "Use javascript Symbols to protect and modularize your private variables.",
+  "main": "symgrab.js",
+  "scripts": {
+    "test": "node_modules/mocha/bin/mocha --harmony"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickclaw/Grab.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nickclaw/Grab.js/issues"
+  },
+  "homepage": "https://github.com/nickclaw/Grab.js",
+  "devDependencies": {
+    "chai": "^1.9.2",
+    "mocha": "^2.0.1"
+  }
+}

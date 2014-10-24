@@ -1,0 +1,23 @@
+{
+  "name": "symgrab",
+  "version": "0.1.0",
+  "homepage": "https://github.com/nickclaw/Grab.js",
+  "authors": [
+    "Nicholas Clawson <nickclaw@gmail.com>"
+  ],
+  "description": "Use javascript Symbols to protect and modularize your private variables.",
+  "main": "symgrab.js",
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
