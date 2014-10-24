@@ -24,4 +24,17 @@ describe('symgrab chaining', function() {
 		expect(grabbed.set.__proto__).to.equal(grabbed);
 		expect(grabbed.remove.__proto__).to.equal(grabbed);
 	});
+
+	it('should correctly inherit a prototypes values', function() {
+		var grabbed = grab({});
+		grabbed.test = "HI";
+
+		expect(grabbed.static.test).to.equal(grabbed.test);
+		expect(grabbed.instance.test).to.equal(grabbed.test);
+		expect(grabbed.public.test).to.equal(grabbed.test);
+		expect(grabbed.private.test).to.equal(grabbed.test);
+		expect(grabbed.get.test).to.equal(grabbed.test);
+		expect(grabbed.set.test).to.equal(grabbed.test);
+		expect(grabbed.remove.test).to.equal(grabbed.test);
+	});
 });
